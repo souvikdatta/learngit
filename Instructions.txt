@@ -1,0 +1,138 @@
+/*
+ * FILE: Instructions.txt
+ *
+ * VERSION: 0.0.1
+ *
+ * Author: Hector Marco-Gisbert <hmarco@hmarco.org>
+ *
+ * LICENSE:
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ *
+ */
+
+[ Preparing environment  ]
+
+   1.- Download 
+   
+   $ cd /tmp
+   $ wget https://sourcery.mentor.com/sgpp/lite/arm/portal/package9740/public/arm-none-eabi/arm-2011.09-69-arm-none-eabi-i686-pc-linux-gnu.tar.bz2
+   
+   2.- Install the ARM compiler in "/opt"
+   
+   $ cd /opt
+   $ sudo tar xvf /tmp/arm-2011.09-69-arm-none-eabi-i686-pc-linux-gnu.tar.bz2
+   
+
+[ Obtaining NEXX ]
+
+   1.- Obtaining NEXX hypervisor sources
+
+   $ mkdir $HOME/nexx
+   $ cd $HOME/nexx
+   $ wget http://hmarco.org/virtualisation/nexx/nexx-0.0.1-sources.tgz
+   $ cd NEXX-hypervisor
+
+   2.- Unpack sources
+
+   $ tar xvf nexx-sources.tgz
+
+
+[ Compiling and executing bare partitions on NEXX hypervisor ]
+
+   
+   1.- Compile and test
+
+   $ make bare
+   $ make test
+
+   2.- You can compile new code to be virtualised by modifying 
+       partitions code. The code of the partitions can be found
+       in "user/partitions/partition0.c" and "user/partitions/partition1.c"
+  
+       After your changes you can compile and test your changes by 
+       executing the step 1.
+
+
+[ Compiling and executing Linux on NEXX hypervisor ]
+
+   The PoC NEXX ARM hypervisor support minimal hypercalls to allow
+   a Linux kernel start up until almost the init process.
+
+   To allow run Linux kernel under the NEXX hypervisor the Kernel
+   need to be patched because the NEXX is a para-virtualised 
+   hypervisor.
+
+   I started to study in deep the Linux kernel internals in order
+   to understand how it works to later modify the Linux Kernel to
+   run it under NEXX hypervisor. The Linux kernel in these moment
+   was linux-3.1.1.
+
+   The steps to run the Linux kernel under NEXX hypervisor are:
+
+   1.- Download kernel and uncompress it:
+
+   $ mkdir $HOME/linux-sources
+   $ cd $HOME/linux-sources
+   $ wget https://www.kernel.org/pub/linux/kernel/v3.x/linux-3.1.1.tar.xz
+   $ tar xvf linux-3.1.1.tar.xz
+
+   
+   2.- Patch the Linux kernel to uset on top of NEXX
+
+   $ wget http://hmarco.org/virtualisation/nexx/linux-3.1.1-nexx.patch
+   $ cd linux-3.1.1
+   $ patch -p2 < ../linux-3.1.1-nexx.patch
+
+   
+   3.- Configure the Linux kernel properly for NEXX hypervisor
+
+   $ wget http://hmarco.org/virtualisation/nexx/linux-3.1.1-nexx.config
+   $ mv linux-3.1.1-nexx.config .config
+
+
+   4.- Install gcc arm to cross-compile Linux kernel
+
+   $ sudo apt-get install gcc-arm-linux-gnueabi
+
+   
+   Although the patch is not finished, it start to execute the
+   init process. A good point to continue the development of the patch is 
+   by following the execution to init process. For this reason I decided
+   substitute the init process by a simple "Hello world" init process.
+   
+   To achieve this we need to do the following:
+
+   5.- Create a simple initramfs with a "Hello world" init process.
+
+   $ mkdir $HOME/initrd
+   $ cd $HOME/initrd
+   $ wget http://hmarco.org/virtualisation/nexx/init.c
+   $ arm-linux-gnueabi-gcc -static init.c -o init 
+
+
+   6.- Compile patched Linux kernel
+
+   $ cd $HOME/linux-sources/linux-3.1.1
+   $ export ARCH=arm
+   $ export CROSS_COMPILE=arm-linux-gnueabi-
+   $ make vmlinux
+
+
+   7.- Compile NEXX hypervisor and test it
+
+   $ cd $HOME/nexx/NEXX-hypervisor
+   $ make linux
+   $ make test
+

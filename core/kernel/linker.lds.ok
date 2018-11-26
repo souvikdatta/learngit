@@ -1,0 +1,24 @@
+MEMORY {
+  ramboot(WXAIL) : ORIGIN = 0x00000000, LENGTH = 128M
+  ram(WXAIL) : ORIGIN = 0x00010000, LENGTH = 128M
+ /*  rom(RX)    : ORIGIN = 0x34000000, LENGTH = 64M */
+}
+
+SECTIONS {
+  ROMBOOT : { 
+    *(.traptab);
+  } > ramboot
+
+ ROM : { 
+    *(.text);
+    *(.rodata);
+  } > ram
+
+  RAM : {
+    *(.data); 
+    _sbss = .;
+    *(.bss);
+    _ebss = .;
+  } > ram 
+  bss_size = _ebss - _sbss;
+}

@@ -1,0 +1,117 @@
+@ Solution 0: use conditional assembly.
+
+.macro fix_r5
+    cmp r5, #0
+    addne   r5, r5, #72
+.endm
+
+@ This should only be used for very short conditional sequences.
+@ If you want to be able to assemble the code as Thumb, you would also need
+@ an "it ne" instruction before the addne instruction, to warn the assembler/CPU
+@ that conditional instructions follow.
+
+
+@ Solution 1: pass the label as an argument.
+@ The caller must ensure the label is unique:
+
+.macro fix_r5 label
+    cmp r0, #0
+    beq \label
+
+    add r5, r5, #72
+\label :
+.endm
+
+
+@ Solution 1a: pass the label _prefix_ as an argument.
+@ The caller must guarantee that all labels starting with the supplied string
+@ are unique.
+@ This approach can be used to allow unlimited unique labels to be generated
+@ when nesting macros etc.
+
+.macro my_macro labelprefix
+    cmp r0, #0
+    beq \labelprefix\()_2
+
+    some_other_macro \labelprefix\()_1
+
+\labelprefix\()_2:
+.endm
+
+@ The `\()' thing is used to separate the macro argument name from following
+@ text.  Without it, the assembler would look for macro arguments called
+@ labelprefix_1 and labelprefix_2 in this case.
+
+    
+@ Solution 2: use a local label.
+@ These are labels whose name is just a number.  They can be redefined freely.
+@ When referring to a local label, you need a `b' or `f' suffix to indicate
+@ whether you want to refer backwards to the most recent definition, or
+@ forwards to the nexxt definition of the same label:
+
+.macro fix_r5
+    cmp r0, #0
+    beq 1f
+
+    add r5, r5, #72
+1:
+.endm
+
+
+@ If the caller is making use of the same local label,
+@ it may get confused when you redefine it.
+
+@ Solution 3: use a non-conflicting local label
+@ Similar to solution 2, but use a large "random" number for the label.
+@ This is less likely to conflict with other code when the macro is invoked:
+
+.macro fix_r5
+    cmp r0, #0
+    beq 1107f
+
+    add r5, r5, #72
+1107:
+.endm
+
+@ Some code in the Linux kernel uses this trick.  You should make sure that
+@ the label numbers used by different macros are unique across your project,
+@ though.
+
+
+@ Solution 4: use `alternate macro mode' to generate unique local labels
+
+.altmacro
+
+.macro fix_r5
+    LOCAL   label
+
+    cmp r5, #0
+    beq label
+
+    add r5, r5, #72
+label:
+.endm
+
+@ Alternate macro mode is not used very much, so you may encounter assembler
+@ bugs.  It also globally changes the way all macros are expanded, which may
+@ cause other macros in the same project to misbehave.
+
+
+@ Other approaches are also possible.  For example, in macros, \@ counts how
+@ many times a macro has been expanded.  This never gets reset to zero during
+@ assembling of a single file, so you can use it for generating fairly unique
+@ labels, e.g.:
+
+.macro fix_r5
+    cmp r5, #0
+    beq .L__fix_r5_\@
+
+    add r5, r5, #72
+
+.L__fix_r5_\@ :
+.endm
+
+@ This also uses the special .L prefix which makes the symbol local as for
+@ the `local labels' mentioned for solutions 2 and 3.  This just means that
+@ the label is not exported doesn't appear in the symbol table.
+
