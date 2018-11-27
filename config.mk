@@ -21,6 +21,7 @@
  # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  #
 
+#Added a comment
 
 ARM_PATH=/opt/arm-2011.09
 LINUX_PATH=${HOME}/linux-sources/linux-3.1.1
